@@ -1,4 +1,9 @@
 from pyparrot.Bebop import Bebop
+import SimpleHTTPServer, SocketServer
+PORT = 8000
+httpd = SocketServer.TCPServer(("", PORT), SimpleHTTPServer.SimpleHTTPRequestHandler)
+httpd.allow_reuse_address = True
+httpd.serve_forever()
 
 bebop = Bebop()
 
