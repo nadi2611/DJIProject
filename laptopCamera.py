@@ -9,18 +9,9 @@ import cv2
 #### parameters ####
 
 
-yawPid = [0.5, 0.5, 0]
-upDownPid = [0.2, 0.2, 0]
-pitchPid = [-0.004, -0.004, 0]
-
-yawSpeedPerror = 0
-pitchSpeedPerror = 0
-upDownSpeedPerror= 0
 
 w,h = 360, 240
-optimalArea = 6500
 cap = cv2.VideoCapture(0)
-counter = 0
 
 def findFace(img):
     faceCascade = cv2.CascadeClassifier("faces/haarcascade_frontalface_default.xml")
@@ -45,6 +36,7 @@ def findFace(img):
 
     if len(myFaceListArea) != 0:
         indexMaxArea = myFaceListArea.index(max(myFaceListArea))
+        print(centerX, centerY)
         return img, [myFaceListCenter[indexMaxArea], myFaceListArea[indexMaxArea]]
 
     else:
@@ -55,12 +47,12 @@ def trackFace(tello, info, width, height, pid, yawSpeedPerror, pitchSpeedPerror,
     global forwardBackwardAreaRange, counter
 
     area = info[1]
-    center_x, center_y = info[0]
+    x, y = info[0]
     forwardBackwardSpeed = 0
 
 
-    yawSpeedError = center_x - width // 2
-    upDownSpeedError = height // 2 - center_y
+    yawSpeedError = x - width // 2
+    upDownSpeedError = y - height // 2
     pitchSpeedError = area - optimalArea # if 2000 > 6500 -> Error = +4500
 
     speed = pid[0] * yawSpeedError + pid[1] * (yawSpeedError - yawSpeedPerror)
@@ -73,7 +65,7 @@ def trackFace(tello, info, width, height, pid, yawSpeedPerror, pitchSpeedPerror,
     pitchSpeed = int(np.clip(pitchSpeed, -100, 100))
 
 
-    if center_x == -1 or center_y == -1:
+    if x == -1 or y == -1:
         counter += 1
         speed = 0
         yawSpeedError = 0
@@ -89,21 +81,12 @@ def trackFace(tello, info, width, height, pid, yawSpeedPerror, pitchSpeedPerror,
     return yawSpeedError, pitchSpeedError, upDownSpeedError
 
 
-tello = Tello()
-tello.connect()
-print(tello.get_battery())
-tello.streamon()
-tello.takeoff()
-
 
 
 while True:
-    #_, img = cap.read()
-    img = tello.get_frame_read().frame
+    _, img = cap.read()
     img = cv2.resize(img, (w,h))
     img, info = findFace(img)
-    yawSpeedPerror, pitchSpeedPerror, upDownSpeedPerror = trackFace(tello, info, w, h, yawPid, yawSpeedPerror, pitchSpeedPerror, upDownSpeedPerror)
     cv2.imshow("Output", img)
     if cv2.waitKey(1) and 0xFF == ord('q'):
-        tello.land()
         break
