@@ -94,8 +94,8 @@ tello.connect()
 print(tello.get_battery())
 tello.streamon()
 tello.takeoff()
-
-
+tello.send_rc_control(0, 0, 25, 0)
+time.sleep(2.5)
 
 while True:
     #_, img = cap.read()
@@ -104,6 +104,4 @@ while True:
     img, info = findFace(img)
     yawSpeedPerror, pitchSpeedPerror, upDownSpeedPerror = trackFace(tello, info, w, h, yawPid, yawSpeedPerror, pitchSpeedPerror, upDownSpeedPerror)
     cv2.imshow("Output", img)
-    if cv2.waitKey(1) and 0xFF == ord('q'):
-        tello.land()
-        break
+
