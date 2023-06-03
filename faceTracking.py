@@ -8,13 +8,18 @@ import cv2
 
 #### parameters ####
 
-forwardBackwardAreaRange = [3000, 4000]
-pid = [0.4, 0.4, 0]
+
+yawPid = [0.4, 0.4, 0]
+pitchPid = [-0.005, -0.005, 0]
+
 yawSpeedPerror = 0
+pitchSpeedPerror = 0
+
 w,h = 360, 240
-optimalArea = 5000
+optimalArea = 6500
 cap = cv2.VideoCapture(0)
 counter = 0
+
 def findFace(img):
     faceCascade = cv2.CascadeClassifier("faces/haarcascade_frontalface_default.xml")
     imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -43,7 +48,7 @@ def findFace(img):
     else:
         return img, [[-1,-1], -1]
 
-def trackFace(tello, info, width, pid, yawSpeedPerror, optimalArea):
+def trackFace(tello, info, width, pid, yawSpeedPerror, pitchSpeedPerror):
 
     global forwardBackwardAreaRange, counter
 
@@ -51,29 +56,29 @@ def trackFace(tello, info, width, pid, yawSpeedPerror, optimalArea):
     x, y = info[0]
     forwardBackwardSpeed = 0
 
+
     yawSpeedError = x - width // 2
+    pitchSpeedError = area - optimalArea # if 2000 > 6500 -> Error = +4500
 
     speed = pid[0] * yawSpeedError + pid[1] * (yawSpeedError - yawSpeedPerror)
     speed = int(np.clip(speed, -100, 100))
 
+    pitchSpeed = pitchPid[0] * pitchSpeedError + pitchPid[1] * (pitchSpeedError - pitchSpeedPerror)
+    pitchSpeed = int(np.clip(pitchSpeed, -100, 100))
+
 
     print(area)
-    if area > forwardBackwardAreaRange[0] and area < forwardBackwardAreaRange[1]:
-        forwardBackwardSpeed = 0
-    elif area > forwardBackwardAreaRange[1]:
-        forwardBackwardSpeed = - 20
-    elif area < forwardBackwardAreaRange[0] and area != -1:
-        forwardBackwardRange = 20
     if x == -1:
         counter += 1
         speed = 0
         yawSpeedError = 0
-    if counter == 20:
-        print(counter)
-        counter = 0
 
-    tello.send_rc_control(0, forwardBackwardSpeed, 0, speed)
-    return yawSpeedError
+        pitchSpeed = 0
+        pitchSpeedError = 0
+
+
+    tello.send_rc_control(0, pitchSpeed, 0, speed)
+    return yawSpeedError, pitchSpeedError
 
 
 tello = Tello()
@@ -89,7 +94,7 @@ while True:
     img = tello.get_frame_read().frame
     img = cv2.resize(img, (w,h))
     img, info = findFace(img)
-    yawSpeedPerror = trackFace(tello, info, w, pid, yawSpeedPerror, optimalArea)
+    yawSpeedPerror, pitchSpeedPerror = trackFace(tello, info, w, yawPid, yawSpeedPerror, pitchSpeedPerror)
     print("Center", info[0])
     cv2.imshow("Output", img)
     if cv2.waitKey(1) and 0xFF == ord('q'):
